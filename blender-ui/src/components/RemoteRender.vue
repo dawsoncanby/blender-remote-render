@@ -25,17 +25,18 @@
             <label for="render-as-anim">Animation</label>
           </div>
         </fieldset>
-        <button @click="sendFile" class="mt-1">Send</button>
+        <button @click="sendFile" :disabled="file === null" class="mt-1">Send</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import axios from 'axios'
 
 export default {
   props: {
-    socketUrl: {
+    serverUrl: {
       type: String,
       default: 'ws://localhost:9898'
     },
@@ -44,6 +45,7 @@ export default {
   data: () => ({
     websocket: null,
     renderAs: 'anim',
+    file: null,
   }),
 
   created() {
@@ -52,7 +54,7 @@ export default {
 
   methods: {
     connect() {
-      const ws = new WebSocket(this.socketUrl)
+      const ws = new WebSocket(this.serverUrl)
       ws.binaryType = 'arraybuffer'
       ws.onerror = e => console.log(e)
 
@@ -72,17 +74,20 @@ export default {
     },
 
     onFileChange(e) {
+      if (e.target.files.length === 0) return
       const file = e.target.files[0]
       const reader = new FileReader()
       reader.onload = e => {
-        console.log(e)
-        this.sendFile(e.target.result)
+        this.file = e.target.result
       }
       reader.readAsArrayBuffer(file)
     },
 
-    sendFile(file) {
-      this.websocket.send(file)
+    sendFile() {
+      axios({
+        url: this.serverUrl,
+        body: this.file,
+      })
     }
   },
 }
