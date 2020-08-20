@@ -1,36 +1,56 @@
-const http = require('http')
-const WebSocketServer = require('websocket').server
+const express = require('express')
+const fileUpload = require('express-fileupload')
+const cors = require('cors')
+const bodyParser = require('body-parser')
+const morgan = require('morgan')
+const _ = require('lodash')
 
-const httpServer = http.createServer((req, res) => {
-    if (req.method === 'POST') {
-        const buff = []
-        req
-        .on('data', data => buff.push(data))
-        .on('end', () => {
-            console.log('done')
-            res.statusCode = 200
-            res.end()
-        })
-        .on('error', err => {
-            console.error(err)
-            res.statusCode = 500
-        })
+const app = express()
+
+// enable files upload
+app.use(fileUpload({
+    createParentPath: true
+}))
+
+//add other middleware
+app.use(cors())
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({extended: true}))
+app.use(morgan('dev'))
+
+//start app
+const port = process.env.PORT || 3000
+
+app.listen(port, () =>
+  console.log(`App is listening on port ${port}.`)
+)
+
+app.post('/upload', async (req, res) => {
+    try {
+        if(!req.files) {
+            res.send({
+                status: false,
+                message: 'No file uploaded'
+            })
+        } else {
+            //Use the name of the input field to retrieve the uploaded file
+            let blendfile = req.files.blendFile
+
+            //Use the mv() method to place the file in upload directory (i.e. "uploads")
+            blendfile.mv(`./uploads/${blendfile.name}`)
+
+            //send response
+            res.send({
+                status: true,
+                message: 'File is uploaded',
+                data: {
+                    name: blendfile.name,
+                    mimetype: blendfile.mimetype,
+                    size: blendfile.size
+                }
+            })
+        }
+    } catch (err) {
+        res.status(500).send(err)
     }
-})
-
-httpServer.listen(9898)
-
-const wsServer = new WebSocketServer({
-    httpServer
-})
-
-wsServer.on('request', req => {
-    const conn = req.accept(null, req.origin)
-    conn.on('message', msg => {
-        console.log('Recieved: ' + msg)
-        conn.sendUTF('This is server')
-    })
-    conn.on('close', (reasonCode, description) => {
-        console.log('client disconnected')
-    })
 })

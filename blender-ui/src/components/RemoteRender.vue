@@ -38,7 +38,7 @@ export default {
   props: {
     serverUrl: {
       type: String,
-      default: 'ws://localhost:9898'
+      default: 'localhost:3000'
     },
   },
 
@@ -54,7 +54,7 @@ export default {
 
   methods: {
     connect() {
-      const ws = new WebSocket(this.serverUrl)
+      const ws = new WebSocket(`ws://${this.serverUrl}`)
       ws.binaryType = 'arraybuffer'
       ws.onerror = e => console.log(e)
 
@@ -75,18 +75,20 @@ export default {
 
     onFileChange(e) {
       if (e.target.files.length === 0) return
-      const file = e.target.files[0]
-      const reader = new FileReader()
-      reader.onload = e => {
-        this.file = e.target.result
-      }
-      reader.readAsArrayBuffer(file)
+      this.file = e.target.files[0]
     },
 
     sendFile() {
+      const formData = new FormData()
+      console.log(this.file)
+      formData.append('blendFile', this.file)
       axios({
-        url: this.serverUrl,
-        body: this.file,
+        method: 'post',
+        url: `http://${this.serverUrl}/upload`,
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        data: formData
       })
     }
   },
